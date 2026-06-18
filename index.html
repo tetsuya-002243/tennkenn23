@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>橋梁点検 写真野帳 v21 PDF Fix</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="写真野帳">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <div class="brand">写真野帳 v21 PDF Fix</div>
+  <div class="nav">
+    <button id="homeBtn">橋梁一覧</button>
+    <button id="editBtn">編集</button>
+    <button id="saveBtn">写真保存</button>
+  </div>
+</header>
+
+<main>
+<section id="home" class="page active">
+  <div class="card">
+    <h1>橋梁一覧</h1>
+    <p class="warn">安定版に、複数橋梁・複数PDFの管理を追加しました。</p>
+    <div class="createRow">
+      <label>橋梁名<input id="newBridgeName" value="試作橋" placeholder="例：野間橋"></label>
+      <button id="createBridgeBtn">橋梁を作成 / 開く</button>
+    </div>
+    <div id="currentStatus" class="status">現在の橋梁：未選択</div>
+    <label class="fileBtn">現在の橋梁にPDF追加<input id="pdfInput" type="file" accept="application/pdf" multiple></label>
+  </div>
+
+  <div class="card">
+    <h2>登録済み橋梁</h2>
+    <input id="bridgeSearch" placeholder="橋梁名で検索">
+    <div id="bridgeList" class="bridgeGrid"></div>
+  </div>
+
+  <div class="card">
+    <h2>現在の橋梁のPDF</h2>
+    <div id="pdfList" class="pdfList"></div>
+  </div>
+</section>
+
+<section id="editor" class="page editorPage">
+  <div class="toolbar">
+    <select id="pdfSelect"></select>
+    <button id="prevPage">◀</button>
+    <span id="pageInfo">PDF未読込</span>
+    <button id="nextPage">▶</button>
+    <button class="tool active" id="moveTool">✋移動</button>
+    <button class="tool" id="photoTool">📷写真</button>
+    <button class="tool" id="penTool">✍️ペン</button>
+    <button class="tool" id="eraserTool">消しゴム</button>
+    <button id="undoBtn">一つ戻る</button>
+    <button id="resetView">表示リセット</button>
+  </div>
+  <div class="subbar">
+    <label>ペン太さ<input id="penSize" type="range" min="1" max="14" value="3"></label>
+    <label>消しゴム<input id="eraserSize" type="range" min="8" max="60" value="28"></label>
+    <label>色<input id="penColor" type="color" value="#dc2626"></label>
+  </div>
+  <div id="canvasWrap">
+    <div id="stage">
+      <canvas id="pdfCanvas"></canvas>
+      <canvas id="drawCanvas"></canvas>
+      <div id="iconLayer"></div>
+      <div id="empty">橋梁一覧で橋梁を作成し、PDFを追加してください</div>
+    </div>
+  </div>
+</section>
+
+<section id="savePage" class="page">
+  <div class="card">
+    <h2>写真保存</h2>
+    <div id="saveSummary" class="status"></div>
+    <button id="zipPhotos">写真ZIP出力</button>
+    <button id="openOneDrive">OneDriveを開く</button>
+    <button id="csvOut">CSV出力</button>
+    <div id="photoList" class="photoList"></div>
+  </div>
+</section>
+</main>
+
+<input id="cameraInput" type="file" accept="image/*" capture="environment" multiple hidden>
+<input id="addPhotoInput" type="file" accept="image/*" capture="environment" multiple hidden>
+
+<div id="photoModal" class="modal hidden">
+  <div class="modalBox">
+    <div class="modalHeader">
+      <h2 id="photoModalTitle">写真</h2>
+      <button id="closeModal">閉じる</button>
+    </div>
+    <div id="modalPhotos" class="photoList"></div>
+    <div class="modalActions">
+      <button id="takeMorePhoto">撮影</button>
+      <button id="moveIconBtn">位置変更</button>
+      <button id="deleteIconBtn" class="danger">削除</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
