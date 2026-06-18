@@ -35,6 +35,16 @@ function getPdfFile(key){
     req.onerror=e=>reject(e);
   });
 }
+function deletePdfFile(key){
+  return new Promise((resolve,reject)=>{
+    if(!key){resolve();return;}
+    if(!fileDb){resolve();return;}
+    const tx=fileDb.transaction("pdfs","readwrite");
+    tx.objectStore("pdfs").delete(key);
+    tx.oncomplete=()=>resolve();
+    tx.onerror=e=>reject(e);
+  });
+}
 
 
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
@@ -80,8 +90,34 @@ function renderPdfList(){
     div.innerHTML=`<div class="bridgeTitle">${pdf.name}</div><div class="pdfStats">ページ記録あり / 写真アイコン ${pdf.icons.length}個</div><div class="cardActions"></div>`;
     const actions=div.querySelector(".cardActions");
     const edit=document.createElement("button");edit.textContent="編集";edit.onclick=async()=>{app.currentPdfId=pdf.id;save();await openPdf(pdf.id);show("editor");};
-    actions.appendChild(edit);$("pdfList").appendChild(div);
+    const del=document.createElement("button");del.textContent="PDF削除";del.className="danger";del.onclick=async()=>{await deletePdfRecord(pdf.id);};
+    actions.append(edit,del);$("pdfList").appendChild(div);
   });
+}
+async function deletePdfRecord(pdfId){
+  const b=currentBridge();
+  if(!b)return;
+  const pdf=b.pdfs.find(p=>p.id===pdfId);
+  if(!pdf)return;
+  if(!confirm(`PDF「${pdf.name}」を削除しますか？
+このPDF上の写真アイコン・ペン記入・紐付く写真も削除されます。`))return;
+  const photoIds=new Set((pdf.icons||[]).flatMap(i=>i.photoIds||[]));
+  b.photos=b.photos.filter(p=>!photoIds.has(p.id));
+  b.pdfs=b.pdfs.filter(p=>p.id!==pdfId);
+  if(app.currentPdfId===pdfId){
+    app.currentPdfId=b.pdfs[0]?.id||null;
+    view.pdf=null;view.page=1;view.pages=0;view.selected=null;view.pendingIcon=null;
+    if($("empty"))$("empty").style.display="flex";
+    if($("pageInfo"))$("pageInfo").textContent="PDF未読込";
+    if($("iconLayer"))$("iconLayer").innerHTML="";
+    if($("pdfCanvas"))$("pdfCanvas").getContext("2d").clearRect(0,0,$("pdfCanvas").width,$("pdfCanvas").height);
+    if($("drawCanvas"))$("drawCanvas").getContext("2d").clearRect(0,0,$("drawCanvas").width,$("drawCanvas").height);
+  }
+  try{
+    if(pdf.key){if(!fileDb)await openFileDb();await deletePdfFile(pdf.key);}
+  }catch(err){console.warn("IndexedDB内PDF削除に失敗",err);}
+  save();
+  renderPdfList();renderPdfSelect();renderSave();
 }
 function renderPdfSelect(){
   const b=currentBridge();$("pdfSelect").innerHTML="";
