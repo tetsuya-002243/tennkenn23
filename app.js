@@ -4,7 +4,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/p
 const $=id=>document.getElementById(id);
 
 const app={bridges:{},currentBridgeId:null,currentPdfId:null};
-const view={pdf:null,page:1,pages:0,w:0,h:0,scale:1,tx:0,ty:0,tool:"move",selected:null,pendingIcon:null,relocate:null,pointers:new Map(),down:null,pan:null,pinch:null,drawing:false,stroke:null};
+const view={pdf:null,page:1,pages:0,w:0,h:0,scale:1,tx:0,ty:0,tool:"move",selected:null,relocate:null,pointers:new Map(),down:null,pan:null,pinch:null,drawing:false,stroke:null};
 
 // ---------- IndexedDB (PDF本体・写真本体はここに保存し、localStorageには軽い情報だけを置く) ----------
 let fileDb=null;
@@ -193,7 +193,7 @@ async function deletePdfRecord(pdfId){
   b.pdfs=b.pdfs.filter(p=>p.id!==pdfId);
   if(app.currentPdfId===pdfId){
     app.currentPdfId=b.pdfs[0]?.id||null;
-    view.pdf=null;view.page=1;view.pages=0;view.selected=null;view.pendingIcon=null;
+    view.pdf=null;view.page=1;view.pages=0;view.selected=null;
     if($("empty"))$("empty").style.display="flex";
     if($("pageInfo"))$("pageInfo").textContent="PDF未読込";
     if($("iconLayer"))$("iconLayer").innerHTML="";
@@ -334,18 +334,40 @@ $("canvasWrap").onpointerup=$("canvasWrap").onpointercancel=e=>{
   view.pointers.delete(e.pointerId);view.pan=null;view.pinch=null;view.down=null;
 };
 function pdfData(){return currentPdf()}
+// 点検箇所の作成とカメラ起動を1件ごとに完全に独立させる。
+// （以前は「カメラ起動待ち」を1つのグローバル変数で管理していたため、
+// 　カメラをキャンセルすると状態が残り続け、2つ目以降が置けなくなる不具合があった）
+let activeCameraHandler=null;
 function createPhotoIcon(p){
   const pdf=pdfData();if(!pdf)return alert("PDFを開いてください");
-  if(view.pendingIcon)return;
   if(view.lastIconAt && Date.now()-view.lastIconAt<700)return;
   view.lastIconAt=Date.now();
   const b=currentBridge();
   if(b.iconSeq==null)b.iconSeq=1;
   const id=uid();
   const icon={id,no:b.iconSeq++,page:view.page,x:p.x/view.w,y:p.y/view.h,photoIds:[],member:"",damageType:"",rank:"",comment:"",updatedAt:Date.now()};
-  pdf.icons.push(icon);pdf.actions.push({type:"addIcon",id});view.selected=id;view.pendingIcon=id;renderAll();setTool("move");$("cameraInput").click();save();
+  pdf.icons.push(icon);pdf.actions.push({type:"addIcon",id});view.selected=id;renderAll();save();
+  // 点検箇所ツールはそのまま維持し、続けて次の箇所をタップできるようにする
+  requestPhotoForIcon(icon);
 }
-$("cameraInput").onchange=async e=>{const icon=pdfData()?.icons.find(i=>i.id===view.pendingIcon);if(icon&&e.target.files.length){await addPhotos(icon,[...e.target.files]);openPhotoModal(icon.id);}view.pendingIcon=null;e.target.value="";save();}
+function requestPhotoForIcon(icon){
+  const input=$("cameraInput");
+  if(activeCameraHandler){input.removeEventListener("change",activeCameraHandler);activeCameraHandler=null;}
+  const handler=async e=>{
+    input.removeEventListener("change",handler);
+    if(activeCameraHandler===handler)activeCameraHandler=null;
+    const files=[...e.target.files];
+    e.target.value="";
+    if(files.length){
+      await addPhotos(icon,files);
+      save();
+      openPhotoModal(icon.id);
+    }
+  };
+  activeCameraHandler=handler;
+  input.addEventListener("change",handler);
+  input.click();
+}
 $("addPhotoInput").onchange=async e=>{const icon=pdfData()?.icons.find(i=>i.id===view.selected);if(icon&&e.target.files.length){await addPhotos(icon,[...e.target.files]);openPhotoModal(icon.id);}e.target.value="";save();}
 async function addPhotos(icon,files){
   const b=currentBridge(),added=[];
