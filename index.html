@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>橋梁点検 写真野帳 v21 PDF Fix</title>
+<title>橋梁点検 写真野帳 v22</title>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="写真野帳">
@@ -12,7 +12,7 @@
 </head>
 <body>
 <header>
-  <div class="brand">写真野帳 v21 PDF Fix</div>
+  <div class="brand">写真野帳 v22（現場強化版）</div>
   <div class="nav">
     <button id="homeBtn">橋梁一覧</button>
     <button id="editBtn">編集</button>
@@ -24,7 +24,7 @@
 <section id="home" class="page active">
   <div class="card">
     <h1>橋梁一覧</h1>
-    <p class="warn">安定版に、複数橋梁・複数PDFの管理を追加しました。</p>
+    <p class="warn">写真本体はすべて端末内のIndexedDBに保存されます。機種変更や引継ぎの際は「写真保存」画面のバックアップ機能をご利用ください。</p>
     <div class="createRow">
       <label>橋梁名<input id="newBridgeName" value="試作橋" placeholder="例：野間橋"></label>
       <button id="createBridgeBtn">橋梁を作成 / 開く</button>
@@ -52,11 +52,12 @@
     <span id="pageInfo">PDF未読込</span>
     <button id="nextPage">▶</button>
     <button class="tool active" id="moveTool">✋移動</button>
-    <button class="tool" id="photoTool">📷写真</button>
+    <button class="tool" id="photoTool">📷点検箇所</button>
     <button class="tool" id="penTool">✍️ペン</button>
     <button class="tool" id="eraserTool">消しゴム</button>
     <button id="undoBtn">一つ戻る</button>
     <button id="resetView">表示リセット</button>
+    <span id="iconCounter" class="counter"></span>
   </div>
   <div class="subbar">
     <label>ペン太さ<input id="penSize" type="range" min="1" max="14" value="3"></label>
@@ -75,11 +76,15 @@
 
 <section id="savePage" class="page">
   <div class="card">
-    <h2>写真保存</h2>
+    <h2>写真保存・バックアップ</h2>
     <div id="saveSummary" class="status"></div>
     <button id="zipPhotos">写真ZIP出力</button>
     <button id="openOneDrive">OneDriveを開く</button>
-    <button id="csvOut">CSV出力</button>
+    <button id="csvOut">CSV出力（点検調書用）</button>
+    <hr>
+    <p class="warn">端末が変わっても橋梁データを引き継げるよう、定期的にバックアップを取ることをおすすめします。</p>
+    <button id="backupAllBtn">全橋梁データをバックアップ(ZIP)</button>
+    <label class="fileBtn">バックアップから復元<input id="restoreInput" type="file" accept=".zip" hidden></label>
     <div id="photoList" class="photoList"></div>
   </div>
 </section>
@@ -88,11 +93,49 @@
 <input id="cameraInput" type="file" accept="image/*" capture="environment" multiple hidden>
 <input id="addPhotoInput" type="file" accept="image/*" capture="environment" multiple hidden>
 
+<datalist id="memberList">
+  <option value="床版"><option value="主桁"><option value="横桁"><option value="対傾構・横構">
+  <option value="支承部"><option value="高欄"><option value="地覆"><option value="伸縮装置">
+  <option value="橋脚"><option value="橋台"><option value="基礎"><option value="舗装">
+  <option value="排水施設"><option value="その他">
+</datalist>
+
 <div id="photoModal" class="modal hidden">
   <div class="modalBox">
     <div class="modalHeader">
       <h2 id="photoModalTitle">写真</h2>
       <button id="closeModal">閉じる</button>
+    </div>
+    <div class="modalForm">
+      <label>部材名<input id="iconMember" list="memberList" placeholder="例：主桁"></label>
+      <label>損傷種類
+        <select id="iconDamageType">
+          <option value="">未選択</option>
+          <option value="ひび割れ">ひび割れ</option>
+          <option value="遊離石灰">遊離石灰</option>
+          <option value="漏水・滞水">漏水・滞水</option>
+          <option value="剥離・鉄筋露出">剥離・鉄筋露出</option>
+          <option value="腐食">腐食</option>
+          <option value="破断">破断</option>
+          <option value="ゆるみ・脱落">ゆるみ・脱落</option>
+          <option value="変形・欠損">変形・欠損</option>
+          <option value="土砂化">土砂化</option>
+          <option value="洗掘">洗掘</option>
+          <option value="異常な音・振動">異常な音・振動</option>
+          <option value="その他">その他</option>
+        </select>
+      </label>
+      <label>損傷程度
+        <select id="iconRank">
+          <option value="">未選択</option>
+          <option value="a">a（損傷なし・軽微）</option>
+          <option value="b">b（軽微な損傷）</option>
+          <option value="c">c（中程度の損傷）</option>
+          <option value="d">d（重大な損傷）</option>
+          <option value="e">e（緊急対応が必要）</option>
+        </select>
+      </label>
+      <label>コメント<textarea id="iconComment" placeholder="任意メモ"></textarea></label>
     </div>
     <div id="modalPhotos" class="photoList"></div>
     <div class="modalActions">
